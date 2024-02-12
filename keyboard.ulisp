@@ -16,27 +16,27 @@
 
 (defvar *keycodes*
   '(;; Modifiers
-    (ctrl #x80) (shft #x81) (alt #x82) (win #x83)
-    (rctrl #x84) (rshft #x85) (ralt #x86) (rwin #x87)
+    (ctrl . #x80) (shft . #x81) (alt . #x82) (win . #x83)
+    (rctrl . #x84) (rshft . #x85) (ralt . #x86) (rwin . #x87)
 
     ;; Symbols
-    (lbkt #x5B) (rbkt #x5D) (dot #x2E) (comma #x2C)
-    (semi #x3B) (quot #x27) (minus #x2D) (grave #x60)
-    (slash #x2F) (bslash #x5C) (equal #x3D)
+    (lbkt . #x5B) (rbkt . #x5D) (dot . #x2E) (comma . #x2C)
+    (semi . #x3B) (quot . #x27) (minus . #x2D) (grave . #x60)
+    (slash . #x2F) (bslash . #x5C) (equal . #x3D)
 
     ;; Arrow keys
-    (left #xD8) (right #xD7) (up #xDA) (down #xD9)
+    (left . #xD8) (right . #xD7) (up . #xDA) (down . #xD9)
 
     ;; Navigation keys
-    (pgup #xD3) (pgdn #xD6) (home #xD2) (end #xD5)
+    (pgup . #xD3) (pgdn . #xD6) (home . #xD2) (end . #xD5)
 
     ;; Other keys
-    (space #x20) (bspace #xB2) (enter #xB0) (caps #xC1)
-    (esc #xB1) (delete #xD4) (insert #xD1) (tab #xB3)
+    (space . #x20) (bspace . #xB2) (enter . #xB0) (caps . #xC1)
+    (esc . #xB1) (delete . #xD4) (insert . #xD1) (tab . #xB3)
 
     ;; F-keys
-    (f1 #xC2) (f2 #xC3) (f3 #xC4) (f4 #xC5) (f5 #xC6) (f6 #xC7)
-    (f7 #xC8) (f8 #xC9) (f9 #xCA) (f10 #xCB) (f11 #xCC) (f12 #xCD)
+    (f1 . #xC2) (f2 . #xC3) (f3 . #xC4) (f4 . #xC5) (f5 . #xC6) (f6 . #xC7)
+    (f7 . #xC8) (f8 . #xC9) (f9 . #xCA) (f10 . #xCB) (f11 . #xCC) (f12 . #xCD)
 
     ))
 
@@ -84,8 +84,8 @@
       ;; TODO: Check if pair
       (let ((symbol-a (car key-a))
             (symbol-b (car key-b))
-            (keycode-a (cadr key-a))
-            (keycode-b (cadr key-b)))
+            (keycode-a (cdr key-a))
+            (keycode-b (cdr key-b)))
         (when (equal keycode-a keycode-b)
           (format t "WARNING: Symbols ~a and ~a both have keycode ~a.~%"
                   symbol-a symbol-b keycode-a))))))
@@ -156,7 +156,7 @@
   (let ((string-key (princ-to-string key)))
     (if (= 1 (length string-key))
         (char-code (char string-key 0))
-      (or (cadr (assoc key *keycodes*)) 0))))
+      (or (cdr (assoc key *keycodes*)) 0))))
 
 ;; TODO: Find a way to access the USB HID interface
 ;; Might be useful: http://www.ulisp.com/show?19Q4
