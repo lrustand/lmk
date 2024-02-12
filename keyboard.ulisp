@@ -211,8 +211,8 @@
 (defun main ()
   (init)
   (loop
-    (process-events)
-    ;; Wait 1 ms
-    (delay 1)))
+    (process-events)))
+
+
 
 )
