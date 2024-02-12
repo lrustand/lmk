@@ -204,7 +204,6 @@
   (keyboard/begin))
 
 
-)
 
 ;; TODO: Add ulisp as submodule or directly
 ;; TODO: Add dockerfile
@@ -216,3 +215,5 @@
     (process-events)
     ;; Wait 1 ms
     (delay 1)))
+
+)
