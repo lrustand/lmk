@@ -15,33 +15,28 @@
   '(28 27 26 22 20 23 21))
 
 (defvar *keycodes*
-  '(;; Letters
-    (q 24) (w 25) (e 26) (r 27) (t 28) (y 29) (u 30) (i 31) (o 32) (p 33)
-    (a 38) (s 39) (d 40) (f 41) (g 42) (h 43) (j 44) (k 45) (l 46)
-    (z 52) (x 53) (c 54) (v 55) (b 56) (n 57) (m 58)
+  '(;; Modifiers
+    (ctrl #x80) (shft #x81) (alt #x82) (win #x83)
+    (rctrl #x84) (rshft #x85) (ralt #x86) (rwin #x87)
 
-    ;; Numbers
-    (1 10) (2 11) (3 12) (4 13) (5 14) (6 15) (7 16) (8 17) (9 18) (0 19) 
-
-    ;; Modifiers
-    (ctrl 37) (shft 50) (alt 64) (win 133) (ralt ) (rshft ) (rctrl )
-
-    ;; Symbols (only discrete keys, top row is covered by numbers above)
-    (lbkt 34) (rbkt 35) (dot ) (comma ) (semi ) (quot )
-    (minus ) (grave ) (slash ) (bslash ) (equal )
+    ;; Symbols
+    (lbkt #x5B) (rbkt #x5D) (dot #x2E) (comma #x2C)
+    (semi #x3B) (quot #x27) (minus #x2D) (grave #x60)
+    (slash #x2F) (bslash #x5C) (equal #x3D)
 
     ;; Arrow keys
-    (left ) (right ) (up ) (down )
+    (left #xD8) (right #xD7) (up #xDA) (down #xD9)
 
     ;; Navigation keys
-    (pgup ) (pgdn ) (home ) (end )
+    (pgup #xD3) (pgdn #xD6) (home #xD2) (end #xD5)
 
     ;; Other keys
-    (space ) (bspace ) (enter ) (caps ) (escape ) (delete ) (insert )
+    (space #x20) (bspace #xB2) (enter #xB0) (caps #xC1)
+    (esc #xB1) (delete #xD4) (insert #xD1) (tab #xB3)
 
     ;; F-keys
-    (f1 67) (f2 68) (f3 69) (f4 70) (f5 71) (f6 72)
-    (f7 73) (f8 74) (f9 75) (f10 76) (f11 95) (f12 96) 
+    (f1 #xC2) (f2 #xC3) (f3 #xC4) (f4 #xC5) (f5 #xC6) (f6 #xC7)
+    (f7 #xC8) (f8 #xC9) (f9 #xCA) (f10 #xCB) (f11 #xCC) (f12 #xCD)
 
     ))
 
@@ -157,13 +152,17 @@
                       row-number keymap-row-length layout-row-length)))))))
 
 
+(defun lookup-key (key)
+  (let ((string-key (princ-to-string key)))
+    (if (= 1 (length string-key))
+        (char-code (char string-key 0))
+      (or (cadr (assoc key *keycodes*)) 0))))
 
 ;; TODO: Find a way to access the USB HID interface
 ;; Might be useful: http://www.ulisp.com/show?19Q4
 (defun send-key (row col pressed?)
   (let* ((key (aref *keymatrix* row col))
-         (keycode (or (cadr (assoc key *keycodes*)) 0)))
-    (format t "Sending key: ~a ~a" key keycode)
+         (keycode (lookup-key key)))
     (if (= pressed? 0)
         (keyboard/release keycode)
       (keyboard/press keycode))))
