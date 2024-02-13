@@ -14,6 +14,10 @@
 (defvar *col-pins*
   '(28 27 26 22 20 23 21))
 
+;; Keycodes are specific to the Arduino Keyboard library
+;; Any printable ASCII character is represented by its ASCI
+;; code. Other keys have special numbers.
+;; https://www.arduino.cc/reference/en/language/functions/usb/keyboard/keyboardmodifiers/
 (defvar *keycodes*
   '(;; Modifiers
     (ctrl . #x80) (shft . #x81) (alt . #x82) (win . #x83)
@@ -35,7 +39,7 @@
     (esc . #xB1) (delete . #xD4) (insert . #xD1) (tab . #xB3)
 
     ;; F-keys
-    (f1 . #xC2) (f2 . #xC3) (f3 . #xC4) (f4 . #xC5) (f5 . #xC6) (f6 . #xC7)
+    (f1 . #xC2) (f2 . #xC3) (f3 . #xC4) (f4  . #xC5) (f5  . #xC6) (f6  . #xC7)
     (f7 . #xC8) (f8 . #xC9) (f9 . #xCA) (f10 . #xCB) (f11 . #xCC) (f12 . #xCD)
 
     ))
@@ -73,7 +77,12 @@
 ;; layout defined by `*layout*'. Is initialized later.
 (defvar *keymatrix* nil)
 
+;; --------------------------------------------------------------
+;; Global variables ends here
+;; --------------------------------------------------------------
 
+;; Make sure all entries in `*keycodes*' are valid,
+;; and that there are no keycode collisions.
 (defun validate-keycodes ()
   (dolist (key-a *keycodes*)
     (dolist (key-b *keycodes*)
@@ -152,14 +161,15 @@
                       row-number keymap-row-length layout-row-length)))))))
 
 
+;; TODO: Implement layers and layer keys
 (defun lookup-key (key)
   (let ((string-key (princ-to-string key)))
     (if (= 1 (length string-key))
         (char-code (char string-key 0))
       (or (cdr (assoc key *keycodes*)) 0))))
 
-;; TODO: Find a way to access the USB HID interface
-;; Might be useful: http://www.ulisp.com/show?19Q4
+
+;; Actually send the key
 (defun send-key (row col pressed?)
   (let* ((key (aref *keymatrix* row col))
          (keycode (lookup-key key)))
@@ -205,8 +215,10 @@
 
 
 ;; TODO: Add ulisp as submodule or directly
+;; TODO: Make ulisp fork
 ;; TODO: Add dockerfile
 ;; TODO: Write short instructions for setup/installation
+;; TODO: Write docstrings
 
 (defun main ()
   (init)
