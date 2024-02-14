@@ -1,0 +1,139 @@
+#+TITLE: LMK
+
+LMK is a firmware for mechanical keyboards written in uLisp. It aims
+to provide a powerful and highly customizable experience. It is still
+a work in progress and the currently implemented features are still on
+a very basic level.
+
+* Supported hardware
+
+The only currently tested hardware configuration is the Ergotravel
+keyboard with an Elite-Pi controller. Other controllers should in
+theory just work, as long as they are supported by uLisp.
+
+* Preparing your keyboard
+
+First you need to install uLisp to your controller. LMK depends on an
+extension to uLisp that exposes the Arduino Keyboard library as Lisp
+functions.
+
+Get uLisp from [[https://github.com/technoblogy/ulisp-arm][here]].
+
+Enable loading the extensions by uncommenting
+
+#+begin_src arduino
+  #define extensions
+#+end_src
+
+You might also want to uncomment this to enable autostarting the
+keyboard.
+
+#+begin_src arduino
+  #define resetautorun
+#+end_src
+
+
+Add the following to =ulisp-extensions.ino=:
+
+#+begin_src arduino
+  #include <Keyboard.h>
+
+  object *fn_keyboard_begin (object *args, object *env) {
+    (void) env;
+    Keyboard.begin();
+    return tee;
+  }
+
+  object *fn_keyboard_end (object *args, object *env) {
+    (void) env;
+    Keyboard.end();
+    return tee;
+  }
+
+  object *fn_keyboard_press (object *args, object *env) {
+    (void) env;
+    return number(Keyboard.press((unsigned int) checkinteger(first(args))));
+  }
+
+  object *fn_keyboard_release (object *args, object *env) {
+    (void) env;
+    return number(Keyboard.release((unsigned int) checkinteger(first(args))));
+  }
+
+  object *fn_keyboard_release_all (object *args, object *env) {
+    (void) env;
+    Keyboard.releaseAll();
+    return tee;
+  }
+
+  // Symbol names
+  const char string_keyboard_begin[] PROGMEM = "keyboard/begin";
+  const char string_keyboard_end[] PROGMEM = "keyboard/end";
+  const char string_keyboard_press[] PROGMEM = "keyboard/press";
+  const char string_keyboard_release[] PROGMEM = "keyboard/release";
+  const char string_keyboard_release_all[] PROGMEM = "keyboard/release-all";
+
+  // Documentation strings
+  const char doc_keyboard_begin[] PROGMEM = "(keyboard/begin)\n";
+  const char doc_keyboard_end[] PROGMEM = "(keyboard/end)\n";
+  const char doc_keyboard_press[] PROGMEM = "(keyboard/press key)\n";
+  const char doc_keyboard_release[] PROGMEM = "(keyboard/release key)\n";
+  const char doc_keyboard_release_all[] PROGMEM = "(keyboard/release-all)\n";
+
+  // Symbol lookup table
+  const tbl_entry_t lookup_table2[] PROGMEM = {
+    { string_keyboard_begin, fn_keyboard_begin, 0200, doc_keyboard_begin },
+    { string_keyboard_end, fn_keyboard_end, 0200, doc_keyboard_end },
+    { string_keyboard_press, fn_keyboard_press, 0211, doc_keyboard_press },
+    { string_keyboard_release, fn_keyboard_release, 0211, doc_keyboard_release },
+    { string_keyboard_release_all, fn_keyboard_release_all, 0200, doc_keyboard_release_all },
+  };
+#+end_src
+
+* Configuration
+
+The configuration is done inside the main file =keyboard.lisp=. All
+global variables are at the top of the file and should provide all the
+customization you need.
+
+** Change keymap
+
+To change to keymap just modify the contents of =*keymap*=. The lines
+are purely esthetic and have no impact on the layout whatsoever. What
+is important are the parenthesises and the keys.
+
+#+begin_src lisp
+(defvar *keymap* '(
+    ╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+    (tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc)
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┬────╮
+    (shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot)
+    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
+    (alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft)
+    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
+                          (win space   space ctrl)
+                          ╰───┴─────╯ ╰─────┴───╯
+))
+#+end_src
+
+
+** Change keyboard layout or geometry
+
+If you change the keyboard geometry or row+column layout you will need
+to change =*layout*=, =*rows*=, =*cols*=, =*row-pins*= and =*col-pins*=.
+
+
+* Installing LMK
+
+Once you have installed uLisp as described in =Preparing your keyboard=,
+and configured your keyboard you can upload the Lisp file to your
+controller.
+
+Open the serial device (most likely =/dev/ttyACM0=) using screen:
+=screen /dev/ttyACM0 9600= and paste the whole contents of your file
+into the screen session.
+
+After loading the Lisp file into uLisp you can test the keyboard
+functionality by running =(main)=. If you are happy with the current
+configuration you can save the Lisp image and set it up to autostart
+LMK on boot: =(save-image 'main)=.
