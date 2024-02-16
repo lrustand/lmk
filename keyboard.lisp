@@ -1,10 +1,6 @@
 (progn
 
 
-(defvar *rows* 4)
-(defvar *cols* 7) ;; TODO: find out how to handle slave
-
-
 ;; Using pinout for Elite-PI on ergotravel
 ;; Elite-PI: https://docs.keeb.io/assets/images/Elite-Pi_Pinout-Both-49caa4613444b03c72bc0c06bd622835.png
 ;; Ergotravel: https://github.com/jpconstantineau/ErgoTravel/blob/master/PCB/ErgoTravel_V1.03_Schematic.pdf
@@ -48,29 +44,29 @@
 ;; See `strip-garbage' for details of ignored symbols.
 (defvar *keymap* '(
     ╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
-    (tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc)
-    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┬────╮
-    (shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot)
+     tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
+     shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot
     ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
-    (alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft)
+     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
     ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
-                          (win space   space ctrl)
+                           win space   space ctrl
                           ╰───┴─────╯ ╰─────┴───╯
 ))
 
 
-;; This defines the translation from the physical placement of the keys to the position in the matrix.
-;; It needs to be further translated from row and column to IO pin numbers
-(defvar *layout*
-  '(((1 0) (1 1) (0 2) (0 3) (0 4) (0 5)         (0 7) (0 8) (0 9) (0 10) (0 11) (1 12) (1 13))
-    ((2 0) (2 1) (1 2) (1 3) (1 4) (1 5)         (1 7) (1 8) (1 9) (1 10) (1 11) (2 12) (2 13))
-    ((3 0) (3 1) (2 2) (2 3) (2 4) (2 5)               (2 8) (2 9) (2 10) (2 11) (3 12) (3 13))
-    (                              (3 4) (3 5)   (3 8) (3 9)                                  )))
+;; This defines the translation from the physical placement of the
+;; keys to the position in the flattened keymatrix. To calculate the
+;; indexes listed here take the row and column number from the actual
+;; electrical layout of the keymatrix. Indexes here can be calculated
+;; as `row-number * number-of-columns + col-number`.
+(defvar *layout* #(
+      14   15   2   3   4   5            7    8   9   10   11   26   27
+      28   29  16  17  18  19           21   22  23   24   25   40   41
+      42   43  30  31  32  33                36  37   38   39   54   55
+                           46   47      50   51 ))
 
 
-;; Holds the current state of the keyboard matrix.
-(defvar *key-states*
-  (make-array (list *rows* *cols*) :element-type 'bit :initial-element 0))
 
 
 ;; Holds the keys from `*keymap*' transformed to the physical row+col
@@ -80,6 +76,16 @@
 ;; --------------------------------------------------------------
 ;; Global variables ends here
 ;; --------------------------------------------------------------
+
+
+;; Return the biggest number in array
+(defun max-in-array (arr)
+  (let ((max (aref arr 0)))
+    (dotimes (pos (length arr))
+      (let ((val (aref arr pos)))
+        (when (> val max)
+          (setf max val))))
+    max))
 
 ;; Make sure all entries in `*keycodes*' are valid,
 ;; and that there are no keycode collisions.
@@ -101,64 +107,54 @@
 
 
 
-;; Remove "comments" from keymap.
-(defun strip-garbage (keymap)
-  (if (null keymap)
-      keymap
-    (let* ((elem (car keymap))
-           (string-elem (princ-to-string elem)))
-      (cond
-       ((listp elem)
-        (cons (strip-garbage elem) (strip-garbage (cdr keymap))))
-       ((or (search "│" string-elem)
-            (search "─" string-elem)
-            (search "╭" string-elem)
-            (search "╮" string-elem)
+;; Returns `t' if the element is "garbage" and should be
+;; dropped from the keymap or layout.
+(defun garbage? (elem)
+  (or (eq '│ elem)
+      (let ((string-elem (princ-to-string elem)))
+        (or (search "─" string-elem)
             (search "╰" string-elem)
+            (search "╭" string-elem)
+            (search "┼" string-elem)
+            (search "╮" string-elem)
             (search "╯" string-elem)
             (search "┬" string-elem)
             (search "┴" string-elem)
             (search "├" string-elem)
-            (search "┤" string-elem)
-            (search "┼" string-elem))
-        (strip-garbage (cdr keymap)))
-       (t (cons elem (strip-garbage (cdr keymap))))))))
+            (search "┤" string-elem)))))
+
+
+
+
+;; TODO: Figure out why the long symbols are split
+;; Remove "comments" from keymap.
+(defun strip-garbage (keymap)
+  (if (null keymap)
+      keymap
+    (let ((elem (car keymap)))
+      (if (garbage? elem)
+        (progn
+          (format t "Stripping symbol from keymap: ~a~%" elem)
+          (strip-garbage (cdr keymap)))
+        (cons elem (strip-garbage (cdr keymap)))))))
 
 
 
 ;; Use the `layout' to convert the visually laid out `keymap' into
 ;; a matrix organized in rows and columns based on the eletrical layout
-(defun keymap->matrix (keymap layout)
-  (let ((keymatrix (make-array (list *rows* 15))))
-    (dotimes (row-number (length keymap))
-      (let* ((keymap-row (nth row-number keymap))
-             (layout-row (nth row-number layout))
-             (row-length (length keymap-row))) ;; Assume equal length
-        (dotimes (col-number row-length)
-          (let* ((key (nth col-number keymap-row))
-                 (matrix-pos (nth col-number layout-row))
-                 (matrix-row (car matrix-pos))
-                 (matrix-col (cadr matrix-pos)))
-            (setf (aref keymatrix matrix-row matrix-col) key)))))
-    keymatrix))
+(defun initialize-keymatrix ()
+  (setq *keymatrix* (make-array (+ 1 (max-in-array *layout*)) :initial-element 0))
+  (let ((keymap-pos 0))
+    (dolist (key (strip-garbage *keymap*))
+      (let ((matrix-pos (aref *layout* keymap-pos)))
+        (setf (aref *keymatrix* matrix-pos) key))
+      (incf keymap-pos))))
 
 
-;; Make sure `keymap' and `layout' has the same geometry
-(defun validate-keymap (keymap layout)
-  (let ((keymap-rows (length keymap))
-        (layout-rows (length layout)))
-    (if (/= keymap-rows layout-rows)
-        (format t "WARNING: Keymap and layout has different number of rows: ~a and ~a.~%"
-                keymap-rows layout-rows)
-      ;; Compare each row
-      (dotimes (row-number keymap-rows)
-        (let* ((keymap-row (nth row-number keymap))
-               (layout-row (nth row-number layout))
-               (keymap-row-length (length keymap-row))
-               (layout-row-length (length layout-row)))
-          (if (/= keymap-row-length layout-row-length)
-              (format t "WARNING: Keymap and layout row ~a has different length: ~a and ~a.~%"
-                      row-number keymap-row-length layout-row-length)))))))
+;; Make sure `*keymap*' and `*layout*' has the same geometry
+(defun validate-keymap ()
+  (unless (= (length (strip-garbage *keymap*)) (length *layout*))
+    (format t "WARNING: Keymap and layout has different length!")))
 
 
 ;; TODO: Implement layers and layer keys
@@ -170,45 +166,55 @@
 
 
 ;; Actually send the key
-(defun send-key (row col pressed?)
-  (let* ((key (aref *keymatrix* row col))
+(defun send-key (pos pressed?)
+  (let* ((key (aref *keymatrix* pos))
          (keycode (lookup-key key)))
     (if (= pressed? 0)
         (keyboard/release keycode)
       (keyboard/press keycode))))
 
 
+;; Holds the current state of the keyboard matrix.
+(defvar *key-states*
+  (make-array (+ 1 (max-in-array *layout*)) :element-type 'bit :initial-element 0))
+
+
+;; TODO: Try inverting the logic, i.e. use pullups on the columns
+;; and pulling the rows low.
 ;; Find which row+column is pressed,
 ;; compare to previous state, and send press/release events
 (defun process-events ()
-  (dotimes (col *cols*)
-    (let ((col-pin (nth col *col-pins*)))
-      ;; Enable column
-      (digitalwrite col-pin t)
-      ;; Read all keys in column
-      (dotimes (row *rows*)
-        (let* ((key-state (aref *key-states* row col))
-               (row-pin (nth row *row-pins*))
-               (key-new-state (if (digitalread row-pin) 1 0)))
-    
+  (let ((key-pos 0)) ;; This is the position in the flattened keymatrix
+    (dolist (row-pin *row-pins*)
+      ;; Enable row
+      (digitalwrite row-pin nil)
+      ;; Read all keys in row
+      (dolist (col-pin *col-pins*)
+        (let* ((key-state (aref *key-states* key-pos))
+               (key-new-state (if (digitalread col-pin) 0 1)))
+
           (unless (eq key-state key-new-state)
-            (setf (aref *key-states* row col) key-new-state)
-            (send-key row col key-new-state))))
-      ;; Disable column
-      (digitalwrite col-pin nil))))
+            (setf (aref *key-states* key-pos) key-new-state)
+            (send-key key-pos key-new-state)))
+        (incf key-pos)) ;; Increase position in flattened keymatrix
+      ;; Disable row
+      (digitalwrite row-pin t)
+      ;; Skip other half of split keyboard
+      (setf key-pos (+ 7 key-pos)))))
+
 
 
 (defun init ()
   ;; Set up IO pins
   (dolist (col-pin *col-pins*)
-    (pinmode col-pin :output))
+    (pinmode col-pin :input-pullup))
   (dolist (row-pin *row-pins*)
-    (pinmode row-pin :input-pulldown))
+    (pinmode row-pin :output))
   ;; Validate
   (validate-keycodes)
-  (validate-keymap (strip-garbage *keymap*) *layout*)
+  (validate-keymap)
   ;; Initialize keymatrix
-  (setq *keymatrix* (keymap->matrix (strip-garbage *keymap*) *layout*))
+  (initialize-keymatrix)
   ;; Initialize USB HID keyboard
   (keyboard/begin))
 
