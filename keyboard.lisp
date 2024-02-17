@@ -1,5 +1,8 @@
 (progn
 
+;; ------------------------------------------------------------------
+;; User variables
+;; ------------------------------------------------------------------
 
 ;; Using pinout for Elite-PI on ergotravel
 ;; Elite-PI: https://docs.keeb.io/assets/images/Elite-Pi_Pinout-Both-49caa4613444b03c72bc0c06bd622835.png
@@ -9,6 +12,38 @@
 
 (defvar *col-pins*
   '(28 27 26 22 20 23 21))
+
+;; Drawing of keyboard will be removed in processing of keymap.
+;; See `strip-garbage' for details of ignored symbols.
+(defvar *keymap* '(
+    ╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+     tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
+     shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot
+    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
+     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
+    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
+                           win space   space ctrl
+                          ╰───┴─────╯ ╰─────┴───╯
+))
+
+
+;; This defines the translation from the physical placement of the
+;; keys to the position in the flattened keymatrix. To calculate the
+;; indexes listed here take the row and column number from the actual
+;; electrical layout of the keymatrix. Indexes here can be calculated
+;; as `row-number * number-of-columns + col-number`.
+(defvar *layout* #(
+      14   15   2   3   4   5            7    8   9   10   11   26   27
+      28   29  16  17  18  19           21   22  23   24   25   40   41
+      42   43  30  31  32  33                36  37   38   39   54   55
+                           46   47      50   51 ))
+
+
+;; ------------------------------------------------------------------
+;; Internal variables
+;; ------------------------------------------------------------------
+
 
 ;; Keycodes are specific to the Arduino Keyboard library
 ;; Any printable ASCII character is represented by its ASCI
@@ -40,43 +75,25 @@
 
     ))
 
-;; Drawing of keyboard will be removed in processing of keymap.
-;; See `strip-garbage' for details of ignored symbols.
-(defvar *keymap* '(
-    ╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
-     tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
-    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
-     shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot
-    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
-     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
-    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
-                           win space   space ctrl
-                          ╰───┴─────╯ ╰─────┴───╯
-))
-
-
-;; This defines the translation from the physical placement of the
-;; keys to the position in the flattened keymatrix. To calculate the
-;; indexes listed here take the row and column number from the actual
-;; electrical layout of the keymatrix. Indexes here can be calculated
-;; as `row-number * number-of-columns + col-number`.
-(defvar *layout* #(
-      14   15   2   3   4   5            7    8   9   10   11   26   27
-      28   29  16  17  18  19           21   22  23   24   25   40   41
-      42   43  30  31  32  33                36  37   38   39   54   55
-                           46   47      50   51 ))
-
-
-
 
 ;; Holds the keys from `*keymap*' transformed to the physical row+col
 ;; layout defined by `*layout*'. Is initialized later.
 (defvar *keymatrix* nil)
 
-;; --------------------------------------------------------------
-;; Global variables ends here
-;; --------------------------------------------------------------
 
+;; Holds the current state of the keyboard matrix.
+(defvar *key-states*
+  (make-array (+ 1 (max-in-array *layout*)) :element-type 'bit :initial-element 0))
+
+;; ------------------------------------------------------------------
+;; Global variables ends here
+;; ------------------------------------------------------------------
+
+
+
+;; ------------------------------------------------------------------
+;; Utility functions
+;; ------------------------------------------------------------------
 
 ;; Return the biggest number in array
 (defun max-in-array (arr)
@@ -86,6 +103,15 @@
         (when (> val max)
           (setf max val))))
     max))
+
+(defun get-bit (byt b)
+  (if (plusp (logand (ash 1 b) byt)) 1 0))
+
+
+;; ------------------------------------------------------------------
+;; Validation functions
+;; ------------------------------------------------------------------
+
 
 ;; Make sure all entries in `*keycodes*' are valid,
 ;; and that there are no keycode collisions.
@@ -106,6 +132,15 @@
                   symbol-a symbol-b keycode-a))))))
 
 
+;; Make sure `*keymap*' and `*layout*' has the same geometry
+(defun validate-keymap ()
+  (unless (= (length (strip-garbage *keymap*)) (length *layout*))
+    (format t "WARNING: Keymap and layout has different length!")))
+
+
+;; ------------------------------------------------------------------
+;; Keymap cleanup functions
+;; ------------------------------------------------------------------
 
 ;; Returns `t' if the element is "garbage" and should be
 ;; dropped from the keymap or layout.
@@ -124,8 +159,6 @@
             (search "┤" string-elem)))))
 
 
-
-
 ;; TODO: Figure out why the long symbols are split
 ;; Remove "comments" from keymap.
 (defun strip-garbage (keymap)
@@ -140,21 +173,9 @@
 
 
 
-;; Use the `layout' to convert the visually laid out `keymap' into
-;; a matrix organized in rows and columns based on the eletrical layout
-(defun initialize-keymatrix ()
-  (setq *keymatrix* (make-array (+ 1 (max-in-array *layout*)) :initial-element 0))
-  (let ((keymap-pos 0))
-    (dolist (key (strip-garbage *keymap*))
-      (let ((matrix-pos (aref *layout* keymap-pos)))
-        (setf (aref *keymatrix* matrix-pos) key))
-      (incf keymap-pos))))
-
-
-;; Make sure `*keymap*' and `*layout*' has the same geometry
-(defun validate-keymap ()
-  (unless (= (length (strip-garbage *keymap*)) (length *layout*))
-    (format t "WARNING: Keymap and layout has different length!")))
+;; ------------------------------------------------------------------
+;; Key dispatch and lookup functions
+;; ------------------------------------------------------------------
 
 
 ;; TODO: Implement layers and layer keys
@@ -174,13 +195,12 @@
       (keyboard/press keycode))))
 
 
-;; Holds the current state of the keyboard matrix.
-(defvar *key-states*
-  (make-array (+ 1 (max-in-array *layout*)) :element-type 'bit :initial-element 0))
 
 
-(defun get-bit (byt b)
-  (if (plusp (logand (ash 1 b) byt)) 1 0))
+
+;; ------------------------------------------------------------------
+;; Matrix scanning functions
+;; ------------------------------------------------------------------
 
 (defun process-slave-events ()
   (with-i2c (str 1 #x08 4)
@@ -225,6 +245,20 @@
     (process-slave-events)))
 
 
+
+;; ------------------------------------------------------------------
+;; Init functions
+;; ------------------------------------------------------------------
+
+;; Use the `layout' to convert the visually laid out `keymap' into
+;; a matrix organized in rows and columns based on the eletrical layout
+(defun initialize-keymatrix ()
+  (setq *keymatrix* (make-array (+ 1 (max-in-array *layout*)) :initial-element 0))
+    (let ((keymap-pos 0))
+    (dolist (key (strip-garbage *keymap*))
+      (let ((matrix-pos (aref *layout* keymap-pos)))
+        (setf (aref *keymatrix* matrix-pos) key))
+      (incf keymap-pos))))
 
 (defun init ()
   ;; Set up IO pins
