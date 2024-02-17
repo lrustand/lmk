@@ -13,18 +13,60 @@
 (defvar *col-pins*
   '(28 27 26 22 20 23 21))
 
+(defvar *custom-keys*
+  '((sp1 . (holdtap (layer 1) space))
+    (sp2 . (holdtap (layer 2) space))
+    (sp3 . (holdtap (layer 3) space))
+    (l1 . (layer 1))
+    (l2 . (layer 2))
+    (ctl . (holdtap ctrl esc))
+    (hyper . (holdtap caps tab))
+    ;; Home row mods
+    (_a . (holdtap shft a))
+    (_s . (holdtap alt s))
+    (_d . (holdtap win d))
+    (_f . (holdtap ctrl f))
+    (_g . (holdtap caps g))
+    (_h . (holdtap caps h))
+    (_j . (holdtap ctrl j))
+    (_k . (holdtap win k))
+    (_l . (holdtap alt l))
+    (_semi . (holdtap shft semi))))
+
 ;; Drawing of keyboard will be removed in processing of keymap.
 ;; See `strip-garbage' for details of ignored symbols.
-(defvar *keymap* '(
-    ╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
-     tab  │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
+(defvar *keymaps* '(
+   ;; Default layer
+   (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+    hyper │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
     ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
      shft │ a │ s │ d │ f │ g │       enter │ h │ j │ k  │ l   semi quot
     ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
      alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
     ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
-                           win space   space ctrl
-                          ╰───┴─────╯ ╰─────┴───╯
+                           win l1      l2    ctl
+                          ╰───┴─────╯ ╰─────┴───╯)
+   ;; Symbol layer
+   (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+    hyper │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
+     shft │ a │ s │ d │ f │ g │       enter left down up right minus plus
+    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
+     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
+    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
+                           win l1      l2    ctl
+                          ╰───┴─────╯ ╰─────┴───╯)
+   ;; Number layer
+   (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+    hyper │ 1 │ 2 │ 3 │ 4 │ 5 │      bspace │ 6 │ 7 │ 8  │ 9  │ 0  │ pipe
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
+     shft │ a │ s │ d │ f │ g │       enter home pgdn pgup end undsc bslash
+    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
+     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
+    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
+                           win l1      l2    ctl
+                          ╰───┴─────╯ ╰─────┴───╯)
+
 ))
 
 
@@ -49,6 +91,7 @@
 ;; code. Other keys have special numbers.
 ;; https://www.arduino.cc/reference/en/language/functions/usb/keyboard/keyboardmodifiers/
 (defvar *keycodes*
+  (append *custom-keys*
   '(;; Modifiers
     (ctrl . #x80) (shft . #x81) (alt . #x82) (win . #x83)
     (rctrl . #x84) (rshft . #x85) (ralt . #x86) (rwin . #x87)
@@ -72,7 +115,12 @@
     (f1 . #xC2) (f2 . #xC3) (f3 . #xC4) (f4  . #xC5) (f5  . #xC6) (f6  . #xC7)
     (f7 . #xC8) (f8 . #xC9) (f9 . #xCA) (f10 . #xCB) (f11 . #xCC) (f12 . #xCD)
 
-    ))
+    ;; Shifted keys
+    (colon . (shft semi)) (undsc . (shft minus)) (dquot . (shft quot))
+    (quest . (shft slash)) (pipe . (shft bslash)) (lt . (shft comma))
+    (gt . (shft dot))
+
+    )))
 
 
 ;; Holds the keys from `*keymap*' transformed to the physical row+col
@@ -86,6 +134,8 @@
 
 (defvar *active-layers* (make-array 16 :element-type 'bit :initial-element 0))
 
+;; Current layer
+(defvar *layer* 0)
 
 ;; ------------------------------------------------------------------
 ;; Global variables ends here
@@ -134,10 +184,11 @@
                   symbol-a symbol-b keycode-a))))))
 
 
-;; Make sure `*keymap*' and `*layout*' has the same geometry
+;; Make sure all `*keymaps*' and `*layout*' has the same geometry
 (defun validate-keymap ()
-  (unless (= (length (strip-garbage *keymap*)) (length *layout*))
-    (format t "WARNING: Keymap and layout has different length!")))
+  (dolist (km *keymaps*)
+    (unless (= (length (strip-garbage km)) (length *layout*))
+      (format t "WARNING: Keymap and layout has different length!")))
 
 
 ;; ------------------------------------------------------------------
@@ -180,7 +231,6 @@
 ;; ------------------------------------------------------------------
 
 
-;; TODO: Implement layers and layer keys
 (defun lookup-key (key)
   (let ((string-key (princ-to-string key)))
     (if (= 1 (length string-key))
@@ -196,23 +246,26 @@
 
 
 (defun activate-layer (layer)
-  (format t "Activating layer ~a~%" layer))
+  (format t "Activating layer ~a~%" layer)
+  (setf *layer* layer))
 
 (defun deactivate-layer (layer)
-  (format t "Deactivating layer ~a~%" layer))
+  (format t "Deactivating layer ~a~%" layer)
+  (setf *layer* 0))
 
 ;; Handle a keypress event
 (defun dispatch-key (pos pressed?)
-  (let* ((key (aref *keymatrix* pos))
+  (let* ((key (aref *keymatrix* *layer* pos))
          (keycode (cond
                    ((symbolp key) (lookup-key key))
-                   ((numberp key) key)
+                   ((numberp key) (if (> key 9) key (lookup-key key)))
                    (t nil))))
     (cond
      ((numberp keycode) (send-key keycode pressed?))
      ;; Ignore any nil key
      ((null keycode) (format t "Ignoring key ~a~%" key))
      ((listp keycode)
+      (format t "Handling special key ~a~%" keycode)
       (cond
        ((eq 'layer (car keycode))
         (let ((layer (cadr keycode)))
@@ -222,7 +275,7 @@
        ((eq 'holdtap (car keycode))
         (format t "HOLDTAP ~a~%" (cadr keycode)))
        ;; Else treat it as a list of normal keys
-       (t (dolist (k keycode) (send-key k pressed?))))))))
+       (t (dolist (k keycode) (send-key (lookup-key k) pressed?))))))))
 
 
 
@@ -249,7 +302,7 @@
 
 
 ;; Find which row+column is pressed,
-;; compare to previous state, and send press/release events
+;; compare to previous state, and dispatch key events
 (defun process-events ()
   (let ((key-pos 0)) ;; This is the position in the flattened keymatrix
     (dolist (row-pin *row-pins*)
@@ -278,12 +331,13 @@
 ;; Use the `layout' to convert the visually laid out `keymap' into
 ;; a matrix organized in rows and columns based on the eletrical layout
 (defun initialize-keymatrix ()
-  (setq *keymatrix* (make-array (+ 1 (max-in-array *layout*)) :initial-element 0))
+  (setq *keymatrix* (make-array (list (length *keymaps*) (+ 1 (max-in-array *layout*))) :initial-element nil))
+  (dotimes (layer (length *keymaps*))
     (let ((keymap-pos 0))
-    (dolist (key (strip-garbage *keymap*))
-      (let ((matrix-pos (aref *layout* keymap-pos)))
-        (setf (aref *keymatrix* matrix-pos) key))
-      (incf keymap-pos))))
+      (dolist (key (strip-garbage (nth layer *keymaps*)))
+        (let ((matrix-pos (aref *layout* keymap-pos)))
+          (setf (aref *keymatrix* layer matrix-pos) key))
+        (incf keymap-pos)))))
 
 (defun init ()
   ;; Set up IO pins
