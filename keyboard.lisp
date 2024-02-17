@@ -252,10 +252,13 @@ dropped from the keymap or layout."
 
 (defun lookup-key (key)
   "Lookup the keycode or special key bound to `key'"
-  (let ((string-key (princ-to-string key)))
-    (if (= 1 (length string-key))
-        (char-code (char string-key 0))
-      (or (cdr (assoc key *keycodes*)) 0))))
+  (if (characterp key)
+      (char-code key)
+    (let ((string-key (princ-to-string key)))
+      (cond
+       ((= 1 (length string-key))
+        (char-code (char string-key 0)))
+       (t (or (cdr (assoc key *keycodes*)) nil))))))
 
 
 (defun send-key (keycode pressed?)
@@ -275,11 +278,13 @@ dropped from the keymap or layout."
   (format t "Deactivating layer ~a~%" layer)
   (setf *layer* 0))
 
-;; Handle a keypress event
 (defun dispatch-key (pos pressed?)
+  "Handle a keypress event"
   (let* ((key (aref *keymatrix* *layer* pos))
          (keycode (cond
                    ((symbolp key) (lookup-key key))
+                   ((characterp key) (lookup-key key))
+                   ;; A keycode or a digit
                    ((numberp key) (if (> key 9) key (lookup-key key)))
                    (t nil))))
     (cond
