@@ -81,6 +81,9 @@
       42   43  30  31  32  33                36  37   38   39   54   55
                            46   47      50   51 ))
 
+(defvar *i2c-port* 1)
+(defvar *slave-address* #x08)
+
 ;; ------------------------------------------------------------------
 ;; Internal variables
 ;; ------------------------------------------------------------------
@@ -136,6 +139,10 @@
 
 ;; Current layer
 (defvar *layer* 0)
+
+(defvar *cols* (length *col-pins*))
+(defvar *rows* (length *row-pins*))
+(defvar *matrix-length* (* *rows* *cols*))
 
 ;; ------------------------------------------------------------------
 ;; Global variables ends here
@@ -283,21 +290,25 @@
 ;; Matrix scanning functions
 ;; ------------------------------------------------------------------
 
+;; Poll key matrix from slave over I2C and process events
 (defun process-slave-events ()
-  (with-i2c (str 1 #x08 4)
-    (let ((key-pos 7))
-      (dotimes (x 4)
-        (let ((byt (read-byte str)))
-          (dotimes (b 7)
-            (when (>= key-pos 56)
-              (return))
-            (let ((key-state (aref *key-states* key-pos))
-                  (key-new-state (get-bit byt b)))
-              (unless (eq key-state key-new-state)
-                (setf (aref *key-states* key-pos) key-new-state)
-                (dispatch-key key-pos key-new-state))
-              (incf key-pos)))
-          (setf key-pos (+ 7 key-pos)))))))
+  (let* ((key-pos *cols*)
+         (bytes (with-i2c (str *i2c-port* *slave-address* *rows*)
+                  (list (read-byte str)
+                        (read-byte str)
+                        (read-byte str)
+                        (read-byte str)))))
+    (dolist (byt bytes)
+      (dotimes (b *cols*)
+        (when (>= key-pos *matrix-length*)
+          (return))
+        (let ((key-state (aref *key-states* key-pos))
+              (key-new-state (get-bit byt b)))
+          (unless (eq key-state key-new-state)
+            (setf (aref *key-states* key-pos) key-new-state)
+            (dispatch-key key-pos key-new-state))
+          (incf key-pos)))
+      (setf key-pos (+ *rows* key-pos)))))
 
 
 
@@ -319,7 +330,7 @@
       ;; Disable row
       (digitalwrite row-pin t)
       ;; Skip other half of split keyboard
-      (setf key-pos (+ 7 key-pos)))
+      (setf key-pos (+ *rows* key-pos)))
     (process-slave-events)))
 
 
@@ -345,6 +356,13 @@
     (pinmode col-pin :input-pullup))
   (dolist (row-pin *row-pins*)
     (pinmode row-pin :output))
+
+  ;; Calculated values
+  (setf *layer* 0)
+  (setf *cols* (length *col-pins*))
+  (setf *rows* (length *row-pins*))
+  (setf *matrix-length* (* *rows* *cols*))
+
   ;; Validate
   (validate-keycodes)
   (validate-keymap)
