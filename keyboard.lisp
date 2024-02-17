@@ -36,7 +36,7 @@
 ;; Drawing of keyboard will be removed in processing of keymap.
 ;; See `strip-garbage' for details of ignored symbols.
 (defvar *keymaps* '(
-   ;; Default layer
+   ;; 0: Default layer
    (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
     hyper │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
     ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
@@ -46,25 +46,35 @@
     ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
                            win l1      l2    ctl
                           ╰───┴─────╯ ╰─────┴───╯)
-   ;; Symbol layer
+   ;; 1: Symbol layer
    (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
     hyper │ q │ w │ e │ r │ t │      bspace │ y │ u │ i  │ o  │ p  │ esc
     ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
      shft │ a │ s │ d │ f │ g │       enter left down up right minus plus
     ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
-     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
+     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot quest shft
     ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
-                           win l1      l2    ctl
+                           win l1      l3    ctl
                           ╰───┴─────╯ ╰─────┴───╯)
-   ;; Number layer
+   ;; 2: Number layer
    (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
     hyper │ 1 │ 2 │ 3 │ 4 │ 5 │      bspace │ 6 │ 7 │ 8  │ 9  │ 0  │ pipe
     ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
-     shft │ a │ s │ d │ f │ g │       enter home pgdn pgup end undsc bslash
+     shft  nil nil nil nil nil        enter home pgdn pgup end undsc bslash
     ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
-     alt  │ z │ x │ c │ v │ b │             │ n │ m comma dot slash shft
+     alt   nil nil nil nil nil               nil nil  nil  nil  nil shft
     ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
-                           win l1      l2    ctl
+                           win l3      l2    ctl
+                          ╰───┴─────╯ ╰─────┴───╯)
+   ;; 3: Function layer
+   (╭─────┬───┬───┬───┬───┬───╮       ╭────╮╭───┬───┬────┬────┬────┬────╮
+    hyper  f1  f2  f3  f4  f5 │      bspace  f6  f7 │ f8 │ f9  f10 │ nil
+    ├─────┼───┼───┼───┼───┼───┤       ├────┤├───┼───┼────┼────┼────┼────┤
+     shft  nil nil nil nil nil        enter  nil nil  nil  nil  nil  nil
+    ├─────┼───┼───┼───┼───┼───┤       ╰────╯├───┼───┼────┼────┼────┼────┤
+     alt   nil nil nil nil nil               nil nil  nil  nil  nil  shft
+    ╰─────┴───┴───┴───┴───┼───┼─────╮ ╭─────┼───┼───┴────┴────┴────┴────╯
+                           win l3      l2    ctl
                           ╰───┴─────╯ ╰─────┴───╯)
 
 ))
