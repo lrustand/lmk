@@ -179,6 +179,27 @@
   (make-array (+ 1 (max-in-array *layout*)) :element-type 'bit :initial-element 0))
 
 
+(defun get-bit (byt b)
+  (if (plusp (logand (ash 1 b) byt)) 1 0))
+
+(defun process-slave-events ()
+  (with-i2c (str 1 #x08 4)
+    (let ((key-pos 7))
+      (dotimes (x 4)
+        (let ((byt (read-byte str)))
+          (dotimes (b 7)
+            (when (>= key-pos 56)
+              (return))
+            (let ((key-state (aref *key-states* key-pos))
+                  (key-new-state (get-bit byt b)))
+              (unless (eq key-state key-new-state)
+                (setf (aref *key-states* key-pos) key-new-state)
+                (send-key key-pos key-new-state))
+              (incf key-pos)))
+          (setf key-pos (+ 7 key-pos)))))))
+
+
+
 ;; TODO: Try inverting the logic, i.e. use pullups on the columns
 ;; and pulling the rows low.
 ;; Find which row+column is pressed,
@@ -200,7 +221,8 @@
       ;; Disable row
       (digitalwrite row-pin t)
       ;; Skip other half of split keyboard
-      (setf key-pos (+ 7 key-pos)))))
+      (setf key-pos (+ 7 key-pos)))
+    (process-slave-events)))
 
 
 

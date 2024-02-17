@@ -26,7 +26,6 @@ void setup()
 
 void loop()
 {
-  int keypos=0;
   for (int r=0; r<4; r++)
   {
     digitalWrite(rows[r], LOW);
@@ -35,13 +34,12 @@ void loop()
       bool key = !digitalRead(cols[c]);
       if (key)
       {
-        keystates[keypos/8] = keystates[keypos/8] | (1 << (keypos%8));
+        keystates[r] = keystates[r] | (64 >> c);
       }
       else
       {
-        keystates[keypos/8] = keystates[keypos/8] & ~(1 << (keypos%8));
+        keystates[r] = keystates[r] & ~(64 >> c);
       }
-      keypos++;
     }
     digitalWrite(rows[r], HIGH);
   }
