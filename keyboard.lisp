@@ -207,7 +207,7 @@ are no keycode collisions."
   "Make sure all `*keymaps*' and `*layout*' have the same geometry"
   (dolist (km *keymaps*)
     (unless (= (length (strip-garbage km)) (length *layout*))
-      (format t "WARNING: Keymap and layout has different length!")))
+      (format t "WARNING: Keymap and layout has different length!"))))
 
 
 ;; ------------------------------------------------------------------
@@ -323,7 +323,7 @@ dropped from the keymap or layout."
             (setf (aref *key-states* key-pos) key-new-state)
             (dispatch-key key-pos key-new-state))
           (incf key-pos)))
-      (setf key-pos (+ *rows* key-pos)))))
+      (setf key-pos (+ *cols* key-pos)))))
 
 
 
@@ -345,7 +345,7 @@ and dispatch key events."
       ;; Disable row
       (digitalwrite row-pin t)
       ;; Skip other half of split keyboard
-      (setf key-pos (+ *rows* key-pos)))
+      (setf key-pos (+ *cols* key-pos)))
     (process-slave-events)))
 
 
