@@ -39,7 +39,6 @@
       42   43  30  31  32  33                36  37   38   39   54   55
                            46   47      50   51 ))
 
-
 ;; ------------------------------------------------------------------
 ;; Internal variables
 ;; ------------------------------------------------------------------
@@ -84,6 +83,9 @@
 ;; Holds the current state of the keyboard matrix.
 (defvar *key-states*
   (make-array (+ 1 (max-in-array *layout*)) :element-type 'bit :initial-element 0))
+
+(defvar *active-layers* (make-array 16 :element-type 'bit :initial-element 0))
+
 
 ;; ------------------------------------------------------------------
 ;; Global variables ends here
@@ -187,14 +189,40 @@
 
 
 ;; Actually send the key
-(defun send-key (pos pressed?)
+(defun send-key (keycode pressed?)
+  (if (= pressed? 0)
+      (keyboard/release keycode)
+    (keyboard/press keycode)))
+
+
+(defun activate-layer (layer)
+  (format t "Activating layer ~a~%" layer))
+
+(defun deactivate-layer (layer)
+  (format t "Deactivating layer ~a~%" layer))
+
+;; Handle a keypress event
+(defun dispatch-key (pos pressed?)
   (let* ((key (aref *keymatrix* pos))
-         (keycode (lookup-key key)))
-    (if (= pressed? 0)
-        (keyboard/release keycode)
-      (keyboard/press keycode))))
-
-
+         (keycode (cond
+                   ((symbolp key) (lookup-key key))
+                   ((numberp key) key)
+                   (t nil))))
+    (cond
+     ((numberp keycode) (send-key keycode pressed?))
+     ;; Ignore any nil key
+     ((null keycode) (format t "Ignoring key ~a~%" key))
+     ((listp keycode)
+      (cond
+       ((eq 'layer (car keycode))
+        (let ((layer (cadr keycode)))
+          (if (plusp pressed?)
+              (activate-layer layer)
+            (deactivate-layer layer))))
+       ((eq 'holdtap (car keycode))
+        (format t "HOLDTAP ~a~%" (cadr keycode)))
+       ;; Else treat it as a list of normal keys
+       (t (dolist (k keycode) (send-key k pressed?))))))))
 
 
 
@@ -214,14 +242,12 @@
                   (key-new-state (get-bit byt b)))
               (unless (eq key-state key-new-state)
                 (setf (aref *key-states* key-pos) key-new-state)
-                (send-key key-pos key-new-state))
+                (dispatch-key key-pos key-new-state))
               (incf key-pos)))
           (setf key-pos (+ 7 key-pos)))))))
 
 
 
-;; TODO: Try inverting the logic, i.e. use pullups on the columns
-;; and pulling the rows low.
 ;; Find which row+column is pressed,
 ;; compare to previous state, and send press/release events
 (defun process-events ()
@@ -233,10 +259,9 @@
       (dolist (col-pin *col-pins*)
         (let* ((key-state (aref *key-states* key-pos))
                (key-new-state (if (digitalread col-pin) 0 1)))
-
           (unless (eq key-state key-new-state)
             (setf (aref *key-states* key-pos) key-new-state)
-            (send-key key-pos key-new-state)))
+            (dispatch-key key-pos key-new-state)))
         (incf key-pos)) ;; Increase position in flattened keymatrix
       ;; Disable row
       (digitalwrite row-pin t)
